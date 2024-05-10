@@ -80,6 +80,8 @@ int Cliente::ReciveFromP(std::string &buffstr) {
     }
 
 void Ponte::HandleSituation(int r, int i) {
+    if(AutoBan)
+    {
         if (r == 0 || r == -1) {
             if (ClientsNumErrors.at(i) > ClientsMaxErrors) {
                 KickClient(i);
@@ -91,8 +93,9 @@ void Ponte::HandleSituation(int r, int i) {
         else {
             ClientsNumErrors.insert(ClientsNumErrors.begin() + i, 0);
         }
-    }    
-Ponte::Ponte(const char* IP) {
+    }
+}    
+Ponte::Ponte(const char* IP, u_short PORT) {
 
         if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
             std::cout << "deu ruim na lib do windows\n";
@@ -112,7 +115,7 @@ Ponte::Ponte(const char* IP) {
        
         
     }
-int Ponte::ReOpenSocket(const char *IP) {
+int Ponte::ReOpenSocket(const char *IP, u_short PORT) {
     if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
         std::cout << "deu ruim na lib do windows\n";
     }
@@ -167,6 +170,7 @@ int Ponte::PutOnLisen() {
             else
             {
                 std::cout << "não foi possivel adicionar o cliente pois seu nome ja esta no servidor";
+                return -1;
             }
                 
         }
@@ -220,27 +224,32 @@ void Ponte::tellOne(std::string message, std::string name) {
     HandleSituation(r, indexcl);
         
 }
-std::string Ponte::ReciveFrom(std::string name) {
+void Ponte::ReciveFrom(std::string name, std::string &buff) {
     int n = StringIsOn(name, ClientsName);
-    if(n != 1);
+    if(n != -1)
     {
-        std::string buff;
         char* buffc = new char[bufferLimit];
         int r = recv(ClientsSK.at(n), buffc, bufferLimit, 0);
+        if (r != -1) {
+            buff.assign(buffc, r);
+        }
         HandleSituation(r, n);
-        buff = buffc;
         delete[] buffc;
-        return buff;
     }
         
 }
 std::vector<std::string> Ponte::ReciveFromAll() {
     std::vector<std::string> messages;
     for (int i = 0;i < ClientsSK.size();i++) {
+       
         char* buff = new char[bufferLimit];
         int r = recv(ClientsSK.at(i), buff, bufferLimit, 0);
         if (r != -1)
-            messages.push_back(buff);
+        {
+            std::string h;
+            h.assign(buff, r);
+            messages.push_back(h);
+        }
         HandleSituation(r, i);
         delete[] buff;
     }
@@ -252,7 +261,11 @@ void Ponte::ReciveFromAll(std::vector<std::string> &messages) {
         char* buff = new char[bufferLimit];
         int r = recv(ClientsSK.at(i), buff, bufferLimit, 0);
         if (r != -1)
-            messages.push_back(buff);
+        {
+            std::string ms;
+            ms.assign(buff, r);
+            messages.push_back(ms);
+        }
         HandleSituation(r, i);
         delete[] buff;
     }
